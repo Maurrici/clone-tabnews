@@ -1,6 +1,21 @@
 import { Client } from "pg";
 
 async function query(queryObject) {
+  let client;
+
+  try {
+    client = await getNewClient();
+    const result = await client.query(queryObject);
+    return result;
+  } catch (error) {
+    console.error("Database query error:", error);
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+async function getNewClient() {
   const client = new Client({
     host: process.env.POSTGRES_HOST,
     port: process.env.POSTGRES_PORT,
@@ -18,20 +33,13 @@ async function query(queryObject) {
     password: process.env.POSTGRES_PASSWORD,
   });
 
-  try {
-    await client.connect();
-    const result = await client.query(queryObject);
-    return result;
-  } catch (error) {
-    console.error("Database query error:", error);
-    throw error;
-  } finally {
-    await client.end();
-  }
+  await client.connect();
+  return client;
 }
 
 export default {
-  query: query,
+  query,
+  getNewClient,
 };
 
 function getSSLValues() {
@@ -41,5 +49,5 @@ function getSSLValues() {
     };
   }
 
-  return process.env.NODE_ENV === "development" ? false : true;
+  return process.env.NODE_ENV === "production" ? true : false;
 }
